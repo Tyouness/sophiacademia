@@ -1,0 +1,18 @@
+/* === “Mes consommations” ==================================== */
+.sr-conso-table{width:100%;border-collapse:collapse;margin-top:18px;font-size:15px}
+.sr-conso-table th,
+.sr-conso-table td{padding:8px 10px;border-bottom:1px solid #e0e0e0}
+.sr-conso-table thead th{
+  background:#1e90ff;color:#fff;text-align:left
+}
+.sr-conso-table tbody tr:nth-child(even){background:#f7f9fc}
+.sr-conso-table td:nth-child(2),
+.sr-conso-table td:nth-child(3),
+.sr-conso-table td:nth-child(4){text-align:right}
+
+/* forcer layout tableau */
+.sr-conso-table thead,
+.sr-conso-table tbody{
+  display:table;
+  width:100%;
+}

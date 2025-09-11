@@ -1,0 +1,46 @@
+/* Staff Registrar – front-end offers
+   ================================================================ */
+#sr-offers-app{display:flex;gap:20px;flex-wrap:wrap;}
+#sr-offers-list{flex:1 1 45%;max-height:80vh;overflow-y:auto;padding-right:10px;}
+#sr-offers-map{flex:1 1 50%;height:80vh;min-height:400px;}
+
+/* Cartes --------------------------------------------------------- */
+.sr-offer-card{background:#fff;border:1px solid #dcdcdc;border-radius:8px;
+  padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+.sr-offer-card h3{margin:0;font-size:1.05rem;letter-spacing:.5px;color:#163c6a;}
+.sr-distance{font-size:.9rem;color:#666;}
+.sr-subject{margin:6px 0 2px;font-weight:600;}
+.sr-level{margin:0;color:#555;}
+.sr-extra{margin:4px 0;color:#333;font-size:.9rem;}
+.badge{display:inline-block;background:#62b800;color:#fff;border-radius:12px;
+  padding:0 8px;font-size:.75rem;margin-right:4px;}
+.sr-consult{background:#1e90ff;color:#fff;border:0;border-radius:4px;
+  padding:8px 18px;cursor:pointer;font-weight:600;margin-top:6px;}
+.sr-offer-card.sr-active{background:#eaf6ff;}
+
+/* Overlay -------------------------------------------------------- */
+#sr-offer-overlay{position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;
+  z-index:9999;padding:20px;box-sizing:border-box;}
+#sr-offer-overlay .sr-offer-detail{background:#fff;border-radius:10px;padding:24px;
+  max-width:900px;width:100%;position:relative;box-shadow:0 4px 20px rgba(0,0,0,.25);}
+#sr-offer-overlay .sr-offer-detail>.sr-close{position:absolute;top:16px;left:16px;
+  background:none;border:none;font-size:1rem;font-weight:700;color:#5b3fa3;
+  cursor:pointer;text-transform:uppercase;}
+#sr-offer-overlay .sr-offer-detail h2{margin:40px 0 10px;padding-left:40px;
+  text-transform:uppercase;font-size:1.2rem;color:#163c6a;}
+#sr-offer-overlay .sr-option{display:block;margin:16px auto 0;background:#62b800;
+  color:#fff;font-weight:700;border:0;border-radius:4px;padding:10px 24px;cursor:pointer;}
+
+/* Responsive ----------------------------------------------------- */
+@media(max-width:900px){
+  #sr-offers-app{flex-direction:column;}
+  #sr-offers-list,#sr-offers-map{flex:1 1 100%;}
+  #sr-offers-map{height:60vh;margin-top:10px;}
+}
+/* bouton désactivé après option */
+.sr-btn-disabled{
+  background:#9aa6b3 !important;
+  cursor:not-allowed !important;
+  opacity:.75;
+}

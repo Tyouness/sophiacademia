@@ -1,0 +1,43 @@
+/* Staff Registrar – “Mes acomptes”  ─────────────────────────── */
+
+/* Tableau */
+.sr-pay-table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:20px;
+  font-family:inherit;
+  font-size:0.95rem;
+}
+
+/* Cellules */
+.sr-pay-table th,
+.sr-pay-table td{
+  padding:8px 10px;
+  border-bottom:1px solid #e0e0e0;
+}
+
+/* En-tête */
+.sr-pay-table thead th{
+  background:#1e90ff;          /* bleu principal */
+  color:#fff;
+  text-align:left;
+  font-weight:600;
+}
+
+/* Lignes zébrées */
+.sr-pay-table tbody tr:nth-child(even){
+  background:#f7f9fc;
+}
+
+/* Statuts “badge” */
+.sr-tag{
+  display:inline-block;
+  padding:2px 8px;
+  border-radius:12px;
+  font-size:0.8rem;
+  line-height:1.2;
+  color:#fff;
+}
+.sr-tag.paid{     background:#28a745;}   /* vert */
+.sr-tag.advance{  background:#ffc107;}   /* jaune */
+.sr-tag.pending{  background:#dc3545;}   /* rouge */

@@ -1,0 +1,13 @@
+/* === “Mes factures mensuelles” ============================== */
+.sr-inv-table{width:100%;border-collapse:collapse;margin-top:18px;font-size:15px}
+.sr-inv-table th,
+.sr-inv-table td{padding:8px 10px;border-bottom:1px solid #e0e0e0}
+.sr-inv-table thead th{
+  background:#1e90ff;color:#fff;text-align:left
+}
+.sr-inv-table tbody tr:nth-child(even){background:#f7f9fc}
+.sr-inv-table td:nth-child(2){text-align:right}
+.sr-inv-table .button{
+  background:#5b3fa3;border:0;border-radius:4px;
+  color:#fff;padding:6px 14px;font-weight:600;font-size:14px
+}
