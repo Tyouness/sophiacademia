@@ -1,0 +1,19 @@
+/* Famille – liste des cours particuliers */
+.sr-fam-table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:20px;
+}
+.sr-fam-table th,
+.sr-fam-table td{
+  padding:8px 10px;
+  border-bottom:1px solid #e0e0e0;
+}
+.sr-fam-table thead th{
+  background:#1e90ff;
+  color:#fff;
+  text-align:left;
+}
+.sr-fam-table tbody tr:nth-child(even){
+  background:#f7f9fc;
+}

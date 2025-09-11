@@ -1,0 +1,63 @@
+/* ────────────────────────────────
+   Sophiacademia – Style commun v1
+   ──────────────────────────────── */
+:root{
+  --sr-primary: #1e90ff;     /* bleu thème */
+  --sr-accent : #5b3fa3;     /* violet            */
+  --sr-success: #62b800;     /* vert validation   */
+  --sr-gray-100:#f7f9fc;
+  --sr-gray-300:#e0e0e0;
+  --sr-font-size:15px;
+}
+
+.sr-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:var(--sr-font-size);
+}
+.sr-table th,
+.sr-table td{
+  padding:8px 10px;
+  border-bottom:1px solid var(--sr-gray-300);
+}
+.sr-table thead th{
+  background:var(--sr-primary);
+  color:#fff;
+  text-align:left;
+  font-weight:600;
+}
+.sr-table tbody tr:nth-child(even){
+  background:var(--sr-gray-100);
+}
+
+/* Badge générique (statuts, tags) */
+.sr-badge{
+  display:inline-block;
+  padding:2px 6px;
+  border-radius:4px;
+  font-size:12px;
+  font-weight:600;
+  color:#fff;
+}
+.sr-badge--success{background:var(--sr-success);}
+.sr-badge--pending{background:var(--sr-accent);}
+.sr-badge--danger {background:#d93025;}
+
+/* Boutons */
+.sr-btn{
+  cursor:pointer;
+  border:none;
+  border-radius:6px;
+  padding:6px 14px;
+  font-size:14px;
+  font-weight:600;
+  background:var(--sr-primary);
+  color:#fff;
+  transition:opacity .2s;
+}
+.sr-btn[disabled],.sr-btn:disabled{opacity:.5;cursor:not-allowed;}
+.sr-btn--secondary{background:var(--sr-accent);}
+
+/* Containers réactifs */
+.sr-wrapper{width:100%;margin:0 auto;max-width:1100px;padding:0 16px;}
+.sr-scroll-x{overflow-x:auto;}
