@@ -31,6 +31,17 @@ async function jsonPost<T>(
   return { response, data: data as T | null };
 }
 
+async function jsonGet<T>(url: string, token: string) {
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json().catch(() => null);
+  return { response, data: data as T | null };
+}
+
 async function createRequest(params: {
   professorToken: string;
   familyId: string;
@@ -475,6 +486,96 @@ describe("integration hardening", () => {
         familyIds: [family.id],
         professorIds: [professor.id],
         actorIds: [professor.id],
+      });
+    }
+  });
+
+  it("family can list its courses", async () => {
+    const professor = await createTestUser("professor");
+    const staff = await createTestUser("staff");
+    const family = await createTestUser("family");
+    const subject = `maths-${randomUUID()}`;
+
+    try {
+      const created = await createRequest({
+        professorToken: professor.accessToken,
+        familyId: family.id,
+        subject,
+      });
+      expect(created.response.status).toBe(200);
+      const requestId = created.data?.data?.id as string;
+
+      const approved = await approveRequest({
+        staffToken: staff.accessToken,
+        requestId,
+      });
+      expect(approved.response.status).toBe(200);
+
+      const declared = await declareCourse({
+        professorToken: professor.accessToken,
+        familyId: family.id,
+        subject,
+      });
+      expect(declared.response.status).toBe(200);
+
+      const listed = await jsonGet<{ data: Array<{ id: string }> }>(
+        `${baseUrl}/api/family/courses`,
+        family.accessToken,
+      );
+
+      expect(listed.response.status).toBe(200);
+      expect(listed.data?.data?.length).toBeGreaterThan(0);
+    } finally {
+      await cleanupTestData({
+        userIds: [professor.id, staff.id, family.id],
+        familyIds: [family.id],
+        professorIds: [professor.id],
+        actorIds: [professor.id, staff.id],
+      });
+    }
+  });
+
+  it("professor can list its courses", async () => {
+    const professor = await createTestUser("professor");
+    const staff = await createTestUser("staff");
+    const family = await createTestUser("family");
+    const subject = `maths-${randomUUID()}`;
+
+    try {
+      const created = await createRequest({
+        professorToken: professor.accessToken,
+        familyId: family.id,
+        subject,
+      });
+      expect(created.response.status).toBe(200);
+      const requestId = created.data?.data?.id as string;
+
+      const approved = await approveRequest({
+        staffToken: staff.accessToken,
+        requestId,
+      });
+      expect(approved.response.status).toBe(200);
+
+      const declared = await declareCourse({
+        professorToken: professor.accessToken,
+        familyId: family.id,
+        subject,
+      });
+      expect(declared.response.status).toBe(200);
+
+      const listed = await jsonGet<{ data: Array<{ id: string }> }>(
+        `${baseUrl}/api/professor/courses`,
+        professor.accessToken,
+      );
+
+      expect(listed.response.status).toBe(200);
+      expect(listed.data?.data?.length).toBeGreaterThan(0);
+    } finally {
+      await cleanupTestData({
+        userIds: [professor.id, staff.id, family.id],
+        familyIds: [family.id],
+        professorIds: [professor.id],
+        actorIds: [professor.id, staff.id],
       });
     }
   });
