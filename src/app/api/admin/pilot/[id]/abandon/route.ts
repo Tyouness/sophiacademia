@@ -1,10 +1,11 @@
 /**
- * POST /api/admin/pilot/[id]/abandon — URSSAF-18
+ * POST /api/admin/pilot/[id]/abandon — URSSAF-18/20
  *
  * Abandonne manuellement un pilote en cours.
  * Guards : admin, pilote existant en statut 'running'.
  *
- * Body (optionnel) : { notes?: string }
+ * Body : { notes: string (min 10, max 1000) }
+ * Les notes sont obligatoires pour tracer la raison de l'abandon.
  */
 
 import { NextResponse } from "next/server";
@@ -12,7 +13,9 @@ import { z } from "zod";
 import { createServerSupabaseClient, createAdminSupabaseClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 
-const bodySchema = z.object({ notes: z.string().max(1000).optional() }).optional();
+const bodySchema = z.object({
+  notes: z.string().min(10, "Les notes doivent contenir au moins 10 caractères").max(1000),
+});
 
 type ProfileRole = "admin" | "staff" | "family" | "professor";
 
@@ -39,14 +42,23 @@ export async function POST(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  // Optional notes
-  let notes: string | undefined;
+  // Notes obligatoires — traçabilité de la raison de l'abandon
+  let notes: string;
   try {
     const body = await request.json().catch(() => null);
     const parsed = bodySchema.safeParse(body);
-    notes = parsed.success ? parsed.data?.notes : undefined;
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "notes_required", reason: "Les notes de conclusion sont obligatoires pour un abandon (min. 10 caractères)." },
+        { status: 422 },
+      );
+    }
+    notes = parsed.data.notes;
   } catch {
-    // notes remain undefined — not critical
+    return NextResponse.json(
+      { error: "notes_required", reason: "Les notes de conclusion sont obligatoires." },
+      { status: 422 },
+    );
   }
 
   const supabaseAdmin = createAdminSupabaseClient();
@@ -72,7 +84,7 @@ export async function POST(
     .update({
       status:    "abandoned",
       closed_at: new Date().toISOString(),
-      notes:     notes ?? null,
+      notes,
     })
     .eq("id", id);
 

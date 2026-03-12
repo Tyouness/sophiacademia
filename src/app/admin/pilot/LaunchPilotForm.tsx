@@ -85,6 +85,8 @@ export default function LaunchPilotForm({
           }
         } else if (res.status === 423) {
           setToast({ type: "error", message: (data?.reason as string | undefined) ?? "Système verrouillé." });
+        } else if (res.status === 422) {
+          setToast({ type: "error", message: (data?.reason as string | undefined) ?? "Période invalide — choisir le mois M-1 ou antérieur." });
         } else {
           setToast({ type: "error", message: (data?.error as string | undefined) ?? "Erreur serveur." });
         }

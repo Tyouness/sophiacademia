@@ -140,6 +140,12 @@ export default async function PilotPage() {
           </div>
           <div className="flex items-center gap-4">
             <Link
+              href="/admin/pilot/first-run"
+              className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100"
+            >
+              Protocole premier test →
+            </Link>
+            <Link
               href="/admin/pilot/results"
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
             >

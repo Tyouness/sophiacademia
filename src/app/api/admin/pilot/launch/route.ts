@@ -18,6 +18,7 @@ import { createServerSupabaseClient, createAdminSupabaseClient } from "@/lib/sup
 import { runPreliveChecks } from "@/lib/prelive/runner";
 import { checkOperationalGuard } from "@/lib/locks/operationalGuard";
 import { checkGlobalSinglePilotGuard } from "@/lib/pilot/lifecycle";
+import { validatePilotPeriod } from "@/lib/pilot/period";
 import { logAudit } from "@/lib/audit";
 
 const payloadSchema = z.object({
@@ -79,6 +80,15 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "global_pilot_running", reason: globalGuard.reason },
       { status: 409 },
+    );
+  }
+
+  // ── Guard : période valide — mois clos uniquement (URSSAF-20) ────────────
+  const periodValidation = validatePilotPeriod(payload.period);
+  if (!periodValidation.valid) {
+    return NextResponse.json(
+      { error: "invalid_period", reason: periodValidation.reason },
+      { status: 422 },
     );
   }
 
