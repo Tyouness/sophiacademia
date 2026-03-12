@@ -1,9 +1,11 @@
 import { runPilotEligibilityChecks } from "@/lib/pilot/runner";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import { PILOT_RUN_STATUS_LABELS, PILOT_RUN_STATUS_COLORS } from "@/lib/pilot/lifecycle";
+import { rankEligibleCandidates } from "@/lib/pilot/scoring";
 import type { PilotPairResult } from "@/lib/pilot/eligibility";
 import LaunchPilotForm from "./LaunchPilotForm";
 import PilotRunActions from "./PilotRunActions";
+import PilotObservationsPanel from "./PilotObservationsPanel";
 import Link from "next/link";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -17,35 +19,8 @@ type PilotRunRow = {
   status: string;
   launched_at: string;
   closed_at: string | null;
+  notes: string | null;
 };
-
-type EligibleProfessor = {
-  professorId: string;
-  professorName: string | null;
-  familyIds: string[];
-  familyNames: (string | null)[];
-  totalCourses: number;
-};
-
-function groupEligibleByProfessor(eligible: PilotPairResult[]): EligibleProfessor[] {
-  const map = new Map<string, EligibleProfessor>();
-  for (const pair of eligible) {
-    if (!map.has(pair.professorId)) {
-      map.set(pair.professorId, {
-        professorId: pair.professorId,
-        professorName: pair.professorName,
-        familyIds: [],
-        familyNames: [],
-        totalCourses: 0,
-      });
-    }
-    const ep = map.get(pair.professorId)!;
-    ep.familyIds.push(pair.familyId);
-    ep.familyNames.push(pair.familyName);
-    ep.totalCourses += pair.paidCoursesCount;
-  }
-  return [...map.values()];
-}
 
 // ── Composants UI ─────────────────────────────────────────────────────────────
 
@@ -130,7 +105,7 @@ export default async function PilotPage() {
       runPilotEligibilityChecks(),
       supabaseAdmin
         .from("pilot_runs")
-        .select("id, professor_id, professor_name, period, family_ids, status, launched_at, closed_at")
+        .select("id, professor_id, professor_name, period, family_ids, status, launched_at, closed_at, notes")
         .order("launched_at", { ascending: false })
         .limit(50),
     ]);
@@ -139,12 +114,16 @@ export default async function PilotPage() {
   const activePilots = pilotRuns.filter((r) => r.status === "running");
   const closedPilots = pilotRuns.filter((r) => r.status !== "running");
 
+  // Alerte garde-fou global : plus d'1 pilote running (ne devrait pas arriver)
+  const tooManyActive = activePilots.length > 1;
+
   // Set of "professorId:defaultPeriod" with an active run — used by launch form guard
   const activePilotSlots = new Set(activePilots.map((r) => r.professor_id));
 
   const eligible   = report.pairs.filter((p) => p.status === "eligible");
   const ineligible = report.pairs.filter((p) => p.status === "ineligible");
-  const eligibleProfessors = groupEligibleByProfessor(eligible);
+  // URSSAF-19 : classement par score (meilleur premier candidat en tête)
+  const rankedCandidates = rankEligibleCandidates(eligible);
 
   return (
     <main className="space-y-6">
@@ -179,6 +158,32 @@ export default async function PilotPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Alerte : trop de pilotes actifs (anomalie) ─────────────────── */}
+      {tooManyActive && (
+        <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
+          <p className="text-sm font-semibold text-orange-800">
+            ⚠ Anomalie : {activePilots.length} pilotes simultanément en cours
+          </p>
+          <p className="mt-1 text-xs text-orange-700">
+            Un seul pilote devrait être actif à la fois. Clôturer ou abandonner
+            les runs excédentaires avant tout nouveau lancement.
+          </p>
+        </div>
+      )}
+
+      {/* ── Alerte : trop de pilotes actifs (anomalie) ─────────────────── */}
+      {tooManyActive && (
+        <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
+          <p className="text-sm font-semibold text-orange-800">
+            ⚠ Anomalie : {activePilots.length} pilotes simultanément en cours
+          </p>
+          <p className="mt-1 text-xs text-orange-700">
+            Un seul pilote devrait être actif à la fois. Clôturer ou abandonner
+            les runs excédentaires avant tout nouveau lancement.
+          </p>
+        </div>
+      )}
 
       {/* ── Alerte pré-live bloqué ───────────────────────────────────────── */}
       {preliveBlocked && (
@@ -371,24 +376,30 @@ export default async function PilotPage() {
             {activePilots.map((run) => (
               <div
                 key={run.id}
-                className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-blue-100 bg-blue-50/50 px-4 py-3"
+                className="rounded-lg border border-blue-100 bg-blue-50/50 px-4 py-3"
               >
-                <div className="space-y-0.5">
-                  <p className="text-sm font-semibold text-gray-900">
-                    {run.professor_name ?? <span className="text-gray-400">— professeur inconnu —</span>}
-                    <span className="ml-2 font-normal text-gray-500">&mdash; {run.period}</span>
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {(run.family_ids as string[]).length} famille
-                    {(run.family_ids as string[]).length !== 1 ? "s" : ""} &bull; lancé le{" "}
-                    {new Date(run.launched_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
-                  </p>
-                  <p className="font-mono text-xs text-gray-400">{run.id.slice(-12)}</p>
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {run.professor_name ?? <span className="text-gray-400">— professeur inconnu —</span>}
+                      <span className="ml-2 font-normal text-gray-500">&mdash; {run.period}</span>
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {(run.family_ids as string[]).length} famille
+                      {(run.family_ids as string[]).length !== 1 ? "s" : ""} &bull; lancé le{" "}
+                      {new Date(run.launched_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
+                    </p>
+                    <p className="font-mono text-xs text-gray-400">{run.id.slice(-12)}</p>
+                  </div>
+                  <PilotRunActions
+                    runId={run.id}
+                    professorName={run.professor_name}
+                    period={run.period}
+                  />
                 </div>
-                <PilotRunActions
+                <PilotObservationsPanel
                   runId={run.id}
-                  professorName={run.professor_name}
-                  period={run.period}
+                  initialNotes={run.notes}
                 />
               </div>
             ))}
@@ -443,36 +454,48 @@ export default async function PilotPage() {
       <div className="rounded-xl bg-white p-6 shadow-md">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-900">
-            Professeurs éligibles au pilote ({eligibleProfessors.length})
+            Professeurs éligibles au pilote ({rankedCandidates.length})
           </h3>
-          {eligibleProfessors.length > 0 && (
+          {rankedCandidates.length > 0 && (
             <span className="text-xs text-gray-500">
-              Recommandation : commencer par 1 seul professeur
+              Classés par score &mdash; &#x2605; = meilleur premier candidat terrain
             </span>
           )}
         </div>
 
-        {eligibleProfessors.length === 0 ? (
+        {rankedCandidates.length === 0 ? (
           <div className="rounded-lg border border-amber-100 bg-amber-50 p-4 text-sm text-amber-700">
             Aucun professeur éligible pour l&apos;instant. Compléter les dossiers
             manquants puis relancer l&apos;analyse.
           </div>
         ) : (
           <div className="space-y-4">
-            {eligibleProfessors.map((ep) => (
+            {rankedCandidates.map((ep) => (
               <div
                 key={ep.professorId}
-                className="rounded-lg border border-emerald-100 bg-emerald-50/40 px-4 py-4"
+                className={`rounded-lg border px-4 py-4 ${
+                  ep.isTopCandidate
+                    ? "border-indigo-200 bg-indigo-50/40 ring-1 ring-indigo-200"
+                    : "border-emerald-100 bg-emerald-50/40"
+                }`}
               >
                 <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {ep.professorName ?? <span className="text-gray-400">— non renseigné —</span>}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-gray-900">
+                        {ep.professorName ?? <span className="text-gray-400">— non renseigné —</span>}
+                      </p>
+                      {ep.isTopCandidate && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-bold text-white">
+                          &#x2605; Meilleur premier candidat
+                        </span>
+                      )}
+                    </div>
                     <p className="mt-0.5 text-xs text-gray-500">
-                      {ep.familyIds.length} famille{ep.familyIds.length !== 1 ? "s" : ""} •{" "}
+                      {ep.familyIds.length} famille{ep.familyIds.length !== 1 ? "s" : ""} &bull;{" "}
                       {ep.totalCourses} cours payé{ep.totalCourses !== 1 ? "s" : ""}
                     </p>
+                    <p className="mt-0.5 text-xs text-gray-400 italic">{ep.recommendation}</p>
                     <div className="mt-1 flex flex-wrap gap-2">
                       {ep.familyNames.map((name, i) => (
                         <Link

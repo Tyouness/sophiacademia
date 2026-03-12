@@ -78,7 +78,11 @@ export default function LaunchPilotForm({
 
       if (!res.ok) {
         if (res.status === 409) {
-          setToast({ type: "error", message: "Un pilote est déjà en cours pour ce professeur / cette période." });
+          if ((data?.error as string) === "global_pilot_running") {
+            setToast({ type: "error", message: (data?.reason as string | undefined) ?? "Un pilote est déjà en cours globalement. Attendre sa clôture." });
+          } else {
+            setToast({ type: "error", message: "Un pilote est déjà en cours pour ce professeur / cette période." });
+          }
         } else if (res.status === 423) {
           setToast({ type: "error", message: (data?.reason as string | undefined) ?? "Système verrouillé." });
         } else {

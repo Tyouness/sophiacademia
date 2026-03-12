@@ -5,6 +5,7 @@
 import { describe, it, expect } from "vitest";
 import {
   checkPilotLaunchGuard,
+  checkGlobalSinglePilotGuard,
   derivePilotStatusFromVerdict,
   isPilotClosed,
   PILOT_RUN_STATUS_LABELS,
@@ -143,5 +144,38 @@ describe("PILOT_RUN_STATUS_LABELS", () => {
     for (const s of statuses) {
       expect(PILOT_RUN_STATUS_LABELS[s as keyof typeof PILOT_RUN_STATUS_LABELS]).toBeTruthy();
     }
+  });
+});
+
+// ── checkGlobalSinglePilotGuard (URSSAF-19) ───────────────────────────────────
+
+describe("checkGlobalSinglePilotGuard — no running pilots", () => {
+  it("allows launch when no pilot is running", () => {
+    expect(checkGlobalSinglePilotGuard(0).allowed).toBe(true);
+  });
+
+  it("reason is null when allowed", () => {
+    expect(checkGlobalSinglePilotGuard(0).reason).toBeNull();
+  });
+});
+
+describe("checkGlobalSinglePilotGuard — active pilot exists", () => {
+  it("blocks launch when 1 pilot is running", () => {
+    expect(checkGlobalSinglePilotGuard(1).allowed).toBe(false);
+  });
+
+  it("blocks launch when 2 pilots are running", () => {
+    expect(checkGlobalSinglePilotGuard(2).allowed).toBe(false);
+  });
+
+  it("provides a reason message", () => {
+    const { reason } = checkGlobalSinglePilotGuard(1);
+    expect(reason).toBeTruthy();
+    expect(reason).toContain("en cours");
+  });
+
+  it("reason mentions clôture", () => {
+    const { reason } = checkGlobalSinglePilotGuard(1);
+    expect(reason).toContain("clôture");
   });
 });

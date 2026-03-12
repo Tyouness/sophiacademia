@@ -113,3 +113,34 @@ export function derivePilotStatusFromVerdict(
 export function isPilotClosed(status: PilotRunStatus): boolean {
   return status !== "running";
 }
+
+// ── Garde-fou premier pilote terrain (URSSAF-19) ──────────────────────────────
+
+export type GlobalPilotGuardResult = {
+  /** true si le lancement est autorisé */
+  allowed: boolean;
+  /** Message de blocage (null si allowed) */
+  reason: string | null;
+};
+
+/**
+ * Garde-fou "un seul pilote running globalement".
+ *
+ * Pour le premier pilote terrain réel, on veut au plus 1 pilote actif en même
+ * temps — toutes paires confondues. Si un autre run est déjà en cours, le
+ * lancement est refusé avec un message clair.
+ *
+ * @param runningPilotCount — nombre de lignes pilot_runs WHERE status='running'
+ */
+export function checkGlobalSinglePilotGuard(
+  runningPilotCount: number,
+): GlobalPilotGuardResult {
+  if (runningPilotCount > 0) {
+    return {
+      allowed: false,
+      reason:
+        "Un pilote est déjà en cours d'exécution. Attendre sa clôture (ou son abandon) avant d'en lancer un nouveau.",
+    };
+  }
+  return { allowed: true, reason: null };
+}

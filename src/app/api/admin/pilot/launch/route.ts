@@ -17,6 +17,7 @@ import { z } from "zod";
 import { createServerSupabaseClient, createAdminSupabaseClient } from "@/lib/supabase/server";
 import { runPreliveChecks } from "@/lib/prelive/runner";
 import { checkOperationalGuard } from "@/lib/locks/operationalGuard";
+import { checkGlobalSinglePilotGuard } from "@/lib/pilot/lifecycle";
 import { logAudit } from "@/lib/audit";
 
 const payloadSchema = z.object({
@@ -66,6 +67,20 @@ export async function POST(request: Request) {
   }
 
   const supabaseAdmin = createAdminSupabaseClient();
+
+  // ── Guard : un seul pilote running globalement (URSSAF-19) ───────────────
+  const { count: runningCount } = await supabaseAdmin
+    .from("pilot_runs")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "running");
+
+  const globalGuard = checkGlobalSinglePilotGuard(runningCount ?? 0);
+  if (!globalGuard.allowed) {
+    return NextResponse.json(
+      { error: "global_pilot_running", reason: globalGuard.reason },
+      { status: 409 },
+    );
+  }
 
   // ── Guard : doublon actif ─────────────────────────────────────────────────
   // La contrainte unique partielle en DB attrapera aussi ce cas, mais on
