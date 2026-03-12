@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getMonthRange } from "@/lib/billing/period";
+import { autoApprovePendingCourses } from "@/lib/courses/auto-approve";
 
 type ProfileRole = "admin" | "staff" | "family" | "professor";
 
 const querySchema = z.object({
-  status: z.enum(["pending", "paid", "advance"]).optional(),
+  status: z.enum(["pending", "paid", "advance", "paid_by_urssaf"]).optional(),
   period: z.string().regex(/^\d{4}-\d{2}$/).optional(),
 });
 
@@ -51,6 +52,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  try {
+    await autoApprovePendingCourses();
+  } catch (error) {
+    console.warn("[courses] auto-approve failed", error);
+  }
+
   const url = new URL(request.url);
   const query = querySchema.safeParse({
     status: url.searchParams.get("status") ?? undefined,
@@ -64,7 +71,7 @@ export async function GET(request: Request) {
   let builder = supabase
     .from("courses")
     .select(
-      "id, family_id, professor_id, subject, status, hours, courses_count, paid_at, created_at",
+      "id, family_id, professor_id, subject, status, approval_status, hours, courses_count, course_date, paid_at, created_at, family_response_deadline, family_confirmed_at, family_update_requested_at, family_update_note, staff_canceled_at, distance_km, distance_km_one_way, distance_km_round_trip, ik_amount, distance_source, prof_hourly, prof_total, prof_net, indemn_km, child_id, child:family_children(first_name, last_name)",
     )
     .eq("family_id", user.id)
     .order("created_at", { ascending: false });

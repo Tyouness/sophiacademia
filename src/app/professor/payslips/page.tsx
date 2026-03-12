@@ -7,6 +7,11 @@ type PayslipRow = {
   id: string;
   period: string;
   number: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  total_net: number | null;
+  total_indemn_km: number | null;
+  status: "pending" | "paid";
   pdf_url: string | null;
   created_at: string;
 };
@@ -51,7 +56,13 @@ export default function ProfessorPayslipsPage() {
   const tableRows = rows.map((row) => ({
     period: row.period,
     number: row.number ?? "-",
-    created: new Date(row.created_at).toLocaleDateString("fr-FR"),
+    range:
+      row.period_start && row.period_end
+        ? `${new Date(row.period_start).toLocaleDateString("fr-FR")} - ${new Date(row.period_end).toLocaleDateString("fr-FR")}`
+        : "-",
+    net: `${Number(row.total_net ?? 0).toFixed(2)} EUR`,
+    indemn: `${Number(row.total_indemn_km ?? 0).toFixed(2)} EUR`,
+    status: row.status,
     pdf: row.pdf_url ? (
       <a
         href={row.pdf_url}
@@ -90,7 +101,10 @@ export default function ProfessorPayslipsPage() {
           columns={[
             { key: "period", label: "Periode" },
             { key: "number", label: "Numero" },
-            { key: "created", label: "Cree" },
+            { key: "range", label: "Du / Au" },
+            { key: "net", label: "Total net" },
+            { key: "indemn", label: "Indemn. km" },
+            { key: "status", label: "Statut" },
             { key: "pdf", label: "PDF" },
           ]}
           rows={tableRows}

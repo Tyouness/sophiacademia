@@ -5,10 +5,12 @@ import DataTable from "@/components/DataTable";
 
 type InvoiceRow = {
   id: string;
-  period: string;
-  total: number;
+  issue_date: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  total_ttc: number;
+  status: "draft" | "issued" | "paid" | "cancelled";
   number: string | null;
-  hours: number | null;
   pdf_url: string | null;
   created_at: string;
 };
@@ -51,11 +53,17 @@ export default function FamilyInvoicesPage() {
   }, []);
 
   const tableRows = rows.map((row) => ({
-    period: row.period,
     number: row.number ?? "-",
-    hours: row.hours ?? "-",
-    total: `${row.total.toFixed(2)} EUR`,
-    created: new Date(row.created_at).toLocaleDateString("fr-FR"),
+    issueDate: row.issue_date
+      ? new Date(row.issue_date).toLocaleDateString("fr-FR")
+      : new Date(row.created_at).toLocaleDateString("fr-FR"),
+    period: row.period_start
+      ? `${new Date(row.period_start).toLocaleDateString("fr-FR")}${
+          row.period_end ? ` - ${new Date(row.period_end).toLocaleDateString("fr-FR")}` : ""
+        }`
+      : "-",
+    status: row.status,
+    total: `${Number(row.total_ttc ?? 0).toFixed(2)} EUR`,
     pdf: row.pdf_url ? (
       <a
         href={row.pdf_url}
@@ -75,7 +83,7 @@ export default function FamilyInvoicesPage() {
       <div className="rounded-xl bg-white p-6 shadow-md">
         <h2 className="text-lg font-semibold text-gray-900">Factures</h2>
         <p className="mt-1 text-sm text-gray-500">
-          Retrouvez vos factures mensuelles.
+          Retrouvez vos factures de seances.
         </p>
       </div>
 
@@ -92,11 +100,11 @@ export default function FamilyInvoicesPage() {
       ) : (
         <DataTable
           columns={[
-            { key: "period", label: "Periode" },
             { key: "number", label: "Numero" },
-            { key: "hours", label: "Heures" },
+            { key: "issueDate", label: "Emission" },
+            { key: "period", label: "Periode" },
+            { key: "status", label: "Statut" },
             { key: "total", label: "Total" },
-            { key: "created", label: "Cree" },
             { key: "pdf", label: "PDF" },
           ]}
           rows={tableRows}

@@ -42,6 +42,70 @@ async function jsonGet<T>(url: string, token: string) {
   return { response, data: data as T | null };
 }
 
+async function updateFamilyProfile(params: {
+  token: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  address: {
+    addr1: string;
+    addr2?: string;
+    postcode: string;
+    city: string;
+    country: string;
+  };
+}) {
+  return jsonPost<{ data: { lat: number; lng: number } }>(
+    `${baseUrl}/api/family/profile`,
+    params.token,
+    {
+      firstName: params.firstName,
+      lastName: params.lastName,
+      phone: params.phone ?? "",
+      address: {
+        addr1: params.address.addr1,
+        addr2: params.address.addr2 ?? "",
+        postcode: params.address.postcode,
+        city: params.address.city,
+        country: params.address.country,
+      },
+    },
+  );
+}
+
+async function updateProfessorProfile(params: {
+  token: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  carHp?: number;
+  address: {
+    addr1: string;
+    addr2?: string;
+    postcode: string;
+    city: string;
+    country: string;
+  };
+}) {
+  return jsonPost<{ data: { lat: number; lng: number } }>(
+    `${baseUrl}/api/professor/profile`,
+    params.token,
+    {
+      firstName: params.firstName,
+      lastName: params.lastName,
+      phone: params.phone ?? "",
+      carHp: params.carHp,
+      address: {
+        addr1: params.address.addr1,
+        addr2: params.address.addr2 ?? "",
+        postcode: params.address.postcode,
+        city: params.address.city,
+        country: params.address.country,
+      },
+    },
+  );
+}
+
 async function createRequest(params: {
   professorToken: string;
   familyId: string;
@@ -576,6 +640,113 @@ describe("integration hardening", () => {
         familyIds: [family.id],
         professorIds: [professor.id],
         actorIds: [professor.id, staff.id],
+      });
+    }
+  });
+
+  it("geocodes profile updates", async () => {
+    const professor = await createTestUser("professor");
+    const family = await createTestUser("family");
+
+    try {
+      const familyRes = await updateFamilyProfile({
+        token: family.accessToken,
+        firstName: "Test",
+        lastName: "Family",
+        address: {
+          addr1: "10 Rue de la Paix",
+          postcode: "75002",
+          city: "Paris",
+          country: "France",
+        },
+      });
+      expect(familyRes.response.status).toBe(200);
+
+      const profRes = await updateProfessorProfile({
+        token: professor.accessToken,
+        firstName: "Test",
+        lastName: "Professor",
+        carHp: 5,
+        address: {
+          addr1: "20 Avenue de l Opera",
+          postcode: "75001",
+          city: "Paris",
+          country: "France",
+        },
+      });
+      expect(profRes.response.status).toBe(200);
+
+      const { data: familyProfile } = await adminClient
+        .from("family_profiles")
+        .select("lat, lng")
+        .eq("id", family.id)
+        .single();
+
+      const { data: professorProfile } = await adminClient
+        .from("professor_profiles")
+        .select("lat, lng")
+        .eq("id", professor.id)
+        .single();
+
+      expect(familyProfile?.lat).toBeTruthy();
+      expect(familyProfile?.lng).toBeTruthy();
+      expect(professorProfile?.lat).toBeTruthy();
+      expect(professorProfile?.lng).toBeTruthy();
+    } finally {
+      await cleanupTestData({
+        userIds: [professor.id, family.id],
+        familyIds: [family.id],
+        professorIds: [professor.id],
+        actorIds: [professor.id],
+      });
+    }
+  });
+
+  it("returns offers with distance and pricing", async () => {
+    const professor = await createTestUser("professor");
+    const family = await createTestUser("family");
+
+    try {
+      await updateFamilyProfile({
+        token: family.accessToken,
+        firstName: "Test",
+        lastName: "Family",
+        address: {
+          addr1: "10 Rue de la Paix",
+          postcode: "75002",
+          city: "Paris",
+          country: "France",
+        },
+      });
+
+      await updateProfessorProfile({
+        token: professor.accessToken,
+        firstName: "Test",
+        lastName: "Professor",
+        carHp: 5,
+        address: {
+          addr1: "20 Avenue de l Opera",
+          postcode: "75001",
+          city: "Paris",
+          country: "France",
+        },
+      });
+
+      const offers = await jsonGet<{
+        data: Array<{ familyId: string; distance_km_oneway: number | null; pricing: { total_prof: number } | null }>;
+      }>(`${baseUrl}/api/professor/offers`, professor.accessToken);
+
+      expect(offers.response.status).toBe(200);
+      const offer = offers.data?.data?.find((item) => item.familyId === family.id);
+      expect(offer).toBeTruthy();
+      expect(offer?.distance_km_oneway).toBeTruthy();
+      expect(offer?.pricing?.total_prof).toBeTruthy();
+    } finally {
+      await cleanupTestData({
+        userIds: [professor.id, family.id],
+        familyIds: [family.id],
+        professorIds: [professor.id],
+        actorIds: [professor.id],
       });
     }
   });

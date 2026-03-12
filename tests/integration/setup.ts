@@ -45,6 +45,7 @@ const required = [
   "SUPABASE_SERVICE_ROLE_KEY",
   "TEST_BASE_URL",
   "CRON_SECRET",
+  "GOOGLE_MAPS_SERVER_KEY",
 ];
 
 for (const key of required) {

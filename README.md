@@ -20,6 +20,18 @@ cp .env.example .env.local
 - NEXT_PUBLIC_SUPABASE_URL
 - NEXT_PUBLIC_SUPABASE_ANON_KEY
 - SUPABASE_SERVICE_ROLE_KEY (serveur uniquement)
+- ADMIN_EMAILS (liste separee par des virgules)
+- NEXT_PUBLIC_SITE_URL (ex: http://localhost:3000)
+- UPSTASH_REDIS_REST_URL
+- UPSTASH_REDIS_REST_TOKEN
+- BOOTSTRAP_ADMIN_EMAIL
+- BOOTSTRAP_ADMIN_NAME
+- BOOTSTRAP_ADMIN_PHONE
+- CRON_SECRET (utilise pour le job auto-pay)
+- GOOGLE_MAPS_SERVER_KEY (geocodage + distance matrix)
+- NEXT_PUBLIC_GOOGLE_MAPS_JS_KEY (SDK Maps cote client)
+- RESEND_API_KEY (notifications email)
+- EMAIL_FROM (ex: "Sophiacademia <noreply@sophiacademia.fr>")
 
 ## Lancer en local
 
@@ -42,6 +54,123 @@ create table if not exists public.healthcheck (
 );
 
 insert into public.healthcheck default values;
+```
+
+## Authentification
+
+- Page de login: /login (email + mot de passe)
+- Reset password: /auth/forgot -> /auth/set-password
+- Callback auth: /auth/callback
+
+## Supabase Auth Settings
+
+A) Activer Confirm email:
+- Authentication -> Providers -> Email -> Confirm email
+
+B) Editer les templates:
+- Authentication -> Templates
+
+C) Templates a adapter:
+- Confirm signup
+- Magic Link
+- Reset password
+
+D) Variables utiles:
+- {{ .ConfirmationURL }}
+- {{ .SiteURL }}
+- {{ .Token }}
+- {{ .TokenHash }}
+- {{ .Email }}
+
+E) Lien callback attendu:
+- ${NEXT_PUBLIC_SITE_URL}/auth/callback
+- Pour reset/invite: ${NEXT_PUBLIC_SITE_URL}/auth/callback?next=/auth/set-password
+
+Recommandation wording FR:
+- Sujet confirm signup: "Confirmez votre email pour acceder a Sophiacademia"
+- Sujet magic link: "Lien de connexion"
+- Sujet reset password: "Definir votre mot de passe"
+- Corps: inclure l'identifiant {{ .Data.username }} si present
+
+## Bootstrap admin (one-shot)
+
+1) Definir les variables:
+- BOOTSTRAP_ADMIN_EMAIL
+- BOOTSTRAP_ADMIN_NAME
+- BOOTSTRAP_ADMIN_PHONE (optionnel)
+- ADMIN_EMAILS doit contenir BOOTSTRAP_ADMIN_EMAIL
+
+2) Lancer le script:
+
+```bash
+npm run bootstrap:admin
+```
+
+Le script envoie une invitation pour definir le mot de passe.
+
+## Admin: creation de comptes
+
+- Aller sur /admin/users
+- Remplir le formulaire (role staff/family/professor)
+- L'utilisateur recoit un lien pour definir son mot de passe
+- L'identifiant est genere (format lettre.chiffres, ex: t.56768)
+- Actions disponibles: desactiver/reactiver, soft delete, changement de role
+
+## Staff: creation de comptes
+
+- Aller sur /staff/users
+- Creation uniquement family/professor
+- Actions disponibles: desactiver/reactiver, soft delete
+
+## Seed minimal (dev)
+
+1) Connectez-vous en admin.
+2) Ouvrez /admin/users et creez 1 staff + 1 professor.
+3) Utilisez leurs emails pour verifier RBAC.
+
+## Migrations Supabase
+
+Executer le fichier [supabase/migrations/0001_auth_profiles.sql](supabase/migrations/0001_auth_profiles.sql)
+dans le SQL Editor Supabase pour creer la table profiles, le trigger et les policies.
+
+## Security baseline
+
+- Validation serveur avec Zod.
+- Sanitization stricte avec sanitize-html (aucun HTML non nettoye).
+- Rate limiting Upstash sur /auth/login.
+- Security headers globaux (CSP, HSTS en production, etc.).
+- Middleware de protection des routes /dashboard, /admin, /staff.
+- ADMIN_EMAILS permet de promouvoir automatiquement un compte en admin au premier login.
+- Aucun signup public (creation via invitation uniquement).
+- Soft delete/disable: profils bloques si disabled_at ou deleted_at.
+
+## Verification
+
+- A) /login -> login password OK
+- B) Confirm signup conserve, templates email OK
+- C) Reset password OK (lien vers /auth/set-password)
+- D) RBAC teste pour family / staff / admin
+- E) Rate limit renvoie 429 sur /auth/login
+- F) Service role non exposee
+- G) Email templates OK
+
+Commandes utiles:
+
+```bash
+npm run build
+npm run check:secrets
+```
+
+Commande de verification:
+
+```bash
+grep -R "SUPABASE_SERVICE_ROLE_KEY" .
+```
+
+Verification additionnelle (fail si usage cote client):
+
+```bash
+npm run check:secrets
 ```
 
 ## Scripts utiles
